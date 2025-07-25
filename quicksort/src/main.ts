@@ -5,13 +5,17 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
   <div class="flex flex-col items-center space-y-8">
     <h1 class="text-2xl font-bold">Quicksort Visualizer</h1>
-    <button id="runBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Show Quicksort</button>
+    <div class="flex items-center space-x-4">
+      <button id="runBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Show Quicksort</button>
+      <input id="tickSlider" type="range" min="0" max="1" step="0.01" value="1" class="w-32" />
+    </div>
     <div id="arrayContainer" class="relative h-80"></div>
   </div>
 `;
 
 const runBtn = document.getElementById('runBtn') as HTMLButtonElement;
 const arrayContainer = document.getElementById('arrayContainer') as HTMLDivElement;
+const tickSlider = document.getElementById('tickSlider') as HTMLInputElement;
 let iLabel: HTMLDivElement;
 let jLabel: HTMLDivElement;
 let pLabel: HTMLDivElement;
@@ -19,7 +23,7 @@ let pLabel: HTMLDivElement;
 const CELL_WIDTH = 32; // px - wider cells
 const GAP = 4; // space between cells
 const ARRAY_SIZE = 30;
-const TICK = 1000; // ms
+let tickMs = 1000; // default tick length
 const LEVEL_OFFSET = 32; // vertical offset per recursion level
 const POINTER_BASES = { i: 24, j: 36, p: 48 } as const;
 
@@ -41,7 +45,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
     cell.style.height = '24px';
     cell.style.left = `${i * (CELL_WIDTH + GAP)}px`;
     cell.style.top = '0px';
-    cell.style.transition = `top ${TICK}ms ease`;
+    cell.style.transition = `top ${tickMs}ms ease`;
     cells[i] = cell;
     arrayContainer.appendChild(cell);
   }
@@ -51,7 +55,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   iLabel.className = 'absolute text-xs font-bold text-red-600';
   iLabel.style.top = '24px';
   iLabel.style.transform = 'translateX(-50%)';
-  iLabel.style.transition = `left ${TICK}ms ease, top ${TICK}ms ease`;
+  iLabel.style.transition = `left ${tickMs * 0.5}ms ease, top ${tickMs * 0.5}ms ease`;
   arrayContainer.appendChild(iLabel);
 
   jLabel = document.createElement('div');
@@ -59,7 +63,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   jLabel.className = 'absolute text-xs font-bold text-blue-600';
   jLabel.style.top = '36px';
   jLabel.style.transform = 'translateX(-50%)';
-  jLabel.style.transition = `left ${TICK}ms ease, top ${TICK}ms ease`;
+  jLabel.style.transition = `left ${tickMs * 0.5}ms ease, top ${tickMs * 0.5}ms ease`;
   arrayContainer.appendChild(jLabel);
 
   pLabel = document.createElement('div');
@@ -67,7 +71,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   pLabel.className = 'absolute text-xs font-bold text-purple-600';
   pLabel.style.top = '48px';
   pLabel.style.transform = 'translateX(-50%)';
-  pLabel.style.transition = `left ${TICK}ms ease, top ${TICK}ms ease`;
+  pLabel.style.transition = `left ${tickMs * 0.5}ms ease, top ${tickMs * 0.5}ms ease`;
   arrayContainer.appendChild(pLabel);
 }
 
@@ -82,7 +86,7 @@ async function animateSwap(cells: HTMLDivElement[], i: number, j: number): Promi
       { transform: `translate(${dx / 2}px,-40px)` },
       { transform: `translate(${dx}px,0)` }
     ],
-    { duration: TICK, easing: 'ease-in-out' }
+    { duration: tickMs, easing: 'ease-in-out' }
   );
 
   const animB = b.animate(
@@ -91,7 +95,7 @@ async function animateSwap(cells: HTMLDivElement[], i: number, j: number): Promi
       { transform: `translate(${-dx / 2}px,40px)` },
       { transform: `translate(${-dx}px,0)` }
     ],
-    { duration: TICK, easing: 'ease-in-out' }
+    { duration: tickMs, easing: 'ease-in-out' }
   );
 
   await Promise.all([animA.finished, animB.finished]);
@@ -115,13 +119,13 @@ async function processActions(actions: Action[], cells: HTMLDivElement[]) {
       label.style.left = `${act.index * (CELL_WIDTH + GAP) + CELL_WIDTH / 2}px`;
       const base = POINTER_BASES[act.name];
       label.style.top = `${base + act.level * LEVEL_OFFSET}px`;
-      await wait(TICK);
+      await wait(tickMs / 2);
     }
     else if (act.type === 'level') {
       for (let idx = act.lo; idx <= act.hi; idx++) {
         cells[idx].style.top = `${act.level * LEVEL_OFFSET}px`;
       }
-      await wait(TICK);
+      await wait(tickMs);
     }
   }
 }
@@ -130,11 +134,16 @@ async function visualize() {
   runBtn.disabled = true;
   runBtn.textContent = 'Sorting ...';
   runBtn.classList.add('cursor-not-allowed');
+  const sliderVal = parseFloat(tickSlider.value);
+  tickMs = (0.2 + sliderVal * 0.8) * 1000;
   const values = generateArray();
   const cells: HTMLDivElement[] = new Array(values.length);
   renderArray(values, cells);
   const actions = quicksort([...values]);
   await processActions(actions, cells);
+  iLabel.remove();
+  jLabel.remove();
+  pLabel.remove();
   runBtn.textContent = 'Show Quicksort';
   runBtn.classList.remove('cursor-not-allowed');
   runBtn.disabled = false;
