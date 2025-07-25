@@ -5,16 +5,13 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
   <div class="flex flex-col items-center space-y-8">
     <h1 class="text-2xl font-bold">Quicksort Visualizer</h1>
-    <button id="runBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Run</button>
-    <div id="arrayContainer" class="relative h-32"></div>
-    <div id="status" class="mt-4 text-xl font-bold text-green-700"></div>
+    <button id="runBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Show Quicksort</button>
+    <div id="arrayContainer" class="relative h-80"></div>
   </div>
 `;
 
 const runBtn = document.getElementById('runBtn') as HTMLButtonElement;
 const arrayContainer = document.getElementById('arrayContainer') as HTMLDivElement;
-const statusEl = document.getElementById('status') as HTMLDivElement;
-let highlightEl: HTMLDivElement;
 let iLabel: HTMLDivElement;
 let jLabel: HTMLDivElement;
 let pLabel: HTMLDivElement;
@@ -23,6 +20,8 @@ const CELL_WIDTH = 32; // px - wider cells
 const GAP = 4; // space between cells
 const ARRAY_SIZE = 30;
 const TICK = 1000; // ms
+const LEVEL_OFFSET = 32; // vertical offset per recursion level
+const POINTER_BASES = { i: 24, j: 36, p: 48 } as const;
 
 function generateArray(): number[] {
   return Array.from({ length: ARRAY_SIZE }, () => Math.floor(Math.random() * 101));
@@ -33,11 +32,6 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   arrayContainer.style.width = `${totalWidth}px`;
   arrayContainer.innerHTML = '';
 
-  highlightEl = document.createElement('div');
-  highlightEl.className = 'absolute top-0 h-8 bg-yellow-300 opacity-50 rounded';
-  highlightEl.style.transition = `left ${TICK}ms ease, width ${TICK}ms ease`;
-  highlightEl.style.width = '0px';
-  arrayContainer.appendChild(highlightEl);
 
   for (let i = 0; i < values.length; i++) {
     const cell = document.createElement('div');
@@ -46,6 +40,8 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
     cell.style.width = `${CELL_WIDTH - 2}px`;
     cell.style.height = '24px';
     cell.style.left = `${i * (CELL_WIDTH + GAP)}px`;
+    cell.style.top = '0px';
+    cell.style.transition = `top ${TICK}ms ease`;
     cells[i] = cell;
     arrayContainer.appendChild(cell);
   }
@@ -55,7 +51,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   iLabel.className = 'absolute text-xs font-bold text-red-600';
   iLabel.style.top = '24px';
   iLabel.style.transform = 'translateX(-50%)';
-  iLabel.style.transition = `left ${TICK}ms ease`;
+  iLabel.style.transition = `left ${TICK}ms ease, top ${TICK}ms ease`;
   arrayContainer.appendChild(iLabel);
 
   jLabel = document.createElement('div');
@@ -63,7 +59,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   jLabel.className = 'absolute text-xs font-bold text-blue-600';
   jLabel.style.top = '36px';
   jLabel.style.transform = 'translateX(-50%)';
-  jLabel.style.transition = `left ${TICK}ms ease`;
+  jLabel.style.transition = `left ${TICK}ms ease, top ${TICK}ms ease`;
   arrayContainer.appendChild(jLabel);
 
   pLabel = document.createElement('div');
@@ -71,7 +67,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   pLabel.className = 'absolute text-xs font-bold text-purple-600';
   pLabel.style.top = '48px';
   pLabel.style.transform = 'translateX(-50%)';
-  pLabel.style.transition = `left ${TICK}ms ease`;
+  pLabel.style.transition = `left ${TICK}ms ease, top ${TICK}ms ease`;
   arrayContainer.appendChild(pLabel);
 }
 
@@ -117,13 +113,13 @@ async function processActions(actions: Action[], cells: HTMLDivElement[]) {
     } else if (act.type === 'pointer') {
       const label = act.name === 'i' ? iLabel : act.name === 'j' ? jLabel : pLabel;
       label.style.left = `${act.index * (CELL_WIDTH + GAP) + CELL_WIDTH / 2}px`;
+      const base = POINTER_BASES[act.name];
+      label.style.top = `${base + act.level * LEVEL_OFFSET}px`;
       await wait(TICK);
-    } else if (act.type === 'range') {
-      if (act.hi < act.lo) {
-        highlightEl.style.width = '0px';
-      } else {
-        highlightEl.style.left = `${act.lo * (CELL_WIDTH + GAP)}px`;
-        highlightEl.style.width = `${(act.hi - act.lo + 1) * (CELL_WIDTH + GAP) - GAP}px`;
+    }
+    else if (act.type === 'level') {
+      for (let idx = act.lo; idx <= act.hi; idx++) {
+        cells[idx].style.top = `${act.level * LEVEL_OFFSET}px`;
       }
       await wait(TICK);
     }
@@ -132,13 +128,15 @@ async function processActions(actions: Action[], cells: HTMLDivElement[]) {
 
 async function visualize() {
   runBtn.disabled = true;
-  statusEl.textContent = '';
+  runBtn.textContent = 'Sorting ...';
+  runBtn.classList.add('cursor-not-allowed');
   const values = generateArray();
   const cells: HTMLDivElement[] = new Array(values.length);
   renderArray(values, cells);
   const actions = quicksort([...values]);
   await processActions(actions, cells);
-  statusEl.textContent = 'Sorted';
+  runBtn.textContent = 'Show Quicksort';
+  runBtn.classList.remove('cursor-not-allowed');
   runBtn.disabled = false;
 }
 
