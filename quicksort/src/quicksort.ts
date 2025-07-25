@@ -1,10 +1,13 @@
 export type Action =
   | { type: 'swap'; i: number; j: number }
   | { type: 'level'; lo: number; hi: number; level: number }
-  | { type: 'pointer'; name: 'i' | 'j' | 'p'; index: number; level: number };
+  | { type: 'pointer'; name: 'i' | 'j' | 'p'; index: number; level: number }
+  | { type: 'prepare'; pivot: number }
+  | { type: 'collapse'; level: number };
 
 export function quicksort(arr: number[]): Action[] {
   const actions: Action[] = [];
+  let maxLevel = 0;
 
   function recordPointer(name: 'i' | 'j' | 'p', index: number, level: number) {
     actions.push({ type: 'pointer', name, index, level });
@@ -12,6 +15,7 @@ export function quicksort(arr: number[]): Action[] {
 
   function setLevel(lo: number, hi: number, level: number) {
     if (hi < lo) return;
+    if (level > maxLevel) maxLevel = level;
     actions.push({ type: 'level', lo, hi, level });
   }
 
@@ -45,12 +49,16 @@ export function quicksort(arr: number[]): Action[] {
     setLevel(lo, hi, level);
     if (lo < hi) {
       const p = partition(lo, hi, level);
+      actions.push({ type: 'prepare', pivot: p });
       qs(lo, p - 1, level + 1);
+      actions.push({ type: 'prepare', pivot: p });
       qs(p + 1, hi, level + 1);
     }
-    setLevel(lo, hi, level > 0 ? level - 1 : 0);
   }
 
   qs(0, arr.length - 1, 0);
+  for (let l = maxLevel; l >= 1; l--) {
+    actions.push({ type: 'collapse', level: l });
+  }
   return actions;
 }
