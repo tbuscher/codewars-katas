@@ -24,6 +24,15 @@ const CELL_WIDTH = 32; // px - wider cells
 const GAP = 4; // space between cells
 const ARRAY_SIZE = 30;
 let tickMs = 1000; // default tick length
+
+function computeTickMs() {
+  const sliderVal = parseFloat(tickSlider.value);
+  return (0.2 + sliderVal * 0.8) * 1000;
+}
+tickMs = computeTickMs();
+tickSlider.addEventListener('input', () => {
+  tickMs = computeTickMs();
+});
 const LEVEL_OFFSET = 32; // vertical offset per recursion level
 const POINTER_BASES = { i: 24, j: 36, p: 48 } as const;
 
@@ -79,6 +88,7 @@ async function animateSwap(cells: HTMLDivElement[], i: number, j: number): Promi
   const a = cells[i];
   const b = cells[j];
   const dx = (j - i) * (CELL_WIDTH + GAP);
+  tickMs = computeTickMs();
 
   const animA = a.animate(
     [
@@ -112,10 +122,19 @@ function wait(ms: number) {
 
 async function processActions(actions: Action[], cells: HTMLDivElement[]) {
   for (const act of actions) {
+    tickMs = computeTickMs();
     if (act.type === 'swap') {
       await animateSwap(cells, act.i, act.j);
     } else if (act.type === 'pointer') {
       const label = act.name === 'i' ? iLabel : act.name === 'j' ? jLabel : pLabel;
+      label.style.transition = `left ${tickMs * 0.5}ms ease, top ${tickMs * 0.5}ms ease`;
+      if (act.name === 'p') {
+        iLabel.style.visibility = 'hidden';
+        jLabel.style.visibility = 'hidden';
+      } else {
+        iLabel.style.visibility = 'visible';
+        jLabel.style.visibility = 'visible';
+      }
       label.style.left = `${act.index * (CELL_WIDTH + GAP) + CELL_WIDTH / 2}px`;
       const base = POINTER_BASES[act.name];
       label.style.top = `${base + act.level * LEVEL_OFFSET}px`;
@@ -123,6 +142,7 @@ async function processActions(actions: Action[], cells: HTMLDivElement[]) {
     }
     else if (act.type === 'level') {
       for (let idx = act.lo; idx <= act.hi; idx++) {
+        cells[idx].style.transition = `top ${tickMs}ms ease`;
         cells[idx].style.top = `${act.level * LEVEL_OFFSET}px`;
       }
       await wait(tickMs);
@@ -134,8 +154,7 @@ async function visualize() {
   runBtn.disabled = true;
   runBtn.textContent = 'Sorting ...';
   runBtn.classList.add('cursor-not-allowed');
-  const sliderVal = parseFloat(tickSlider.value);
-  tickMs = (0.2 + sliderVal * 0.8) * 1000;
+  tickMs = computeTickMs();
   const values = generateArray();
   const cells: HTMLDivElement[] = new Array(values.length);
   renderArray(values, cells);
