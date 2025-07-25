@@ -1,12 +1,12 @@
 export type Action =
   | { type: 'swap'; i: number; j: number }
   | { type: 'range'; lo: number; hi: number }
-  | { type: 'pointer'; name: 'i' | 'j'; index: number };
+  | { type: 'pointer'; name: 'i' | 'j' | 'p'; index: number };
 
 export function quicksort(arr: number[]): Action[] {
   const actions: Action[] = [];
 
-  function recordPointer(name: 'i' | 'j', index: number) {
+  function recordPointer(name: 'i' | 'j' | 'p', index: number) {
     actions.push({ type: 'pointer', name, index });
   }
 
@@ -23,6 +23,7 @@ export function quicksort(arr: number[]): Action[] {
   function partition(lo: number, hi: number): number {
     setRange(lo, hi);
     const pivot = arr[hi];
+    recordPointer('p', hi);
     let i = lo;
     recordPointer('i', i);
     for (let j = lo; j < hi; j++) {
@@ -35,6 +36,7 @@ export function quicksort(arr: number[]): Action[] {
     }
     recordPointer('j', hi);
     swap(i, hi);
+    recordPointer('p', i);
     return i;
   }
 

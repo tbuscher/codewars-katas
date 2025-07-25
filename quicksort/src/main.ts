@@ -3,10 +3,10 @@ import { quicksort, Action } from './quicksort';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
-  <div class="flex flex-col items-center space-y-4">
+  <div class="flex flex-col items-center space-y-8">
     <h1 class="text-2xl font-bold">Quicksort Visualizer</h1>
     <button id="runBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Run</button>
-    <div id="arrayContainer" class="relative h-32 mt-4"></div>
+    <div id="arrayContainer" class="relative h-32"></div>
     <div id="status" class="mt-4 text-xl font-bold text-green-700"></div>
   </div>
 `;
@@ -17,6 +17,7 @@ const statusEl = document.getElementById('status') as HTMLDivElement;
 let highlightEl: HTMLDivElement;
 let iLabel: HTMLDivElement;
 let jLabel: HTMLDivElement;
+let pLabel: HTMLDivElement;
 
 const CELL_WIDTH = 32; // px - wider cells
 const GAP = 4; // space between cells
@@ -33,7 +34,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   arrayContainer.innerHTML = '';
 
   highlightEl = document.createElement('div');
-  highlightEl.className = 'absolute top-0 h-8 bg-yellow-200 opacity-50 rounded';
+  highlightEl.className = 'absolute top-0 h-8 bg-yellow-300 opacity-50 rounded';
   highlightEl.style.transition = `left ${TICK}ms ease, width ${TICK}ms ease`;
   highlightEl.style.width = '0px';
   arrayContainer.appendChild(highlightEl);
@@ -53,6 +54,7 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   iLabel.textContent = 'i';
   iLabel.className = 'absolute text-xs font-bold text-red-600';
   iLabel.style.top = '24px';
+  iLabel.style.transform = 'translateX(-50%)';
   iLabel.style.transition = `left ${TICK}ms ease`;
   arrayContainer.appendChild(iLabel);
 
@@ -60,8 +62,17 @@ function renderArray(values: number[], cells: HTMLDivElement[]) {
   jLabel.textContent = 'j';
   jLabel.className = 'absolute text-xs font-bold text-blue-600';
   jLabel.style.top = '36px';
+  jLabel.style.transform = 'translateX(-50%)';
   jLabel.style.transition = `left ${TICK}ms ease`;
   arrayContainer.appendChild(jLabel);
+
+  pLabel = document.createElement('div');
+  pLabel.textContent = 'p';
+  pLabel.className = 'absolute text-xs font-bold text-purple-600';
+  pLabel.style.top = '48px';
+  pLabel.style.transform = 'translateX(-50%)';
+  pLabel.style.transition = `left ${TICK}ms ease`;
+  arrayContainer.appendChild(pLabel);
 }
 
 async function animateSwap(cells: HTMLDivElement[], i: number, j: number): Promise<void> {
@@ -104,8 +115,8 @@ async function processActions(actions: Action[], cells: HTMLDivElement[]) {
     if (act.type === 'swap') {
       await animateSwap(cells, act.i, act.j);
     } else if (act.type === 'pointer') {
-      const label = act.name === 'i' ? iLabel : jLabel;
-      label.style.left = `${act.index * (CELL_WIDTH + GAP)}px`;
+      const label = act.name === 'i' ? iLabel : act.name === 'j' ? jLabel : pLabel;
+      label.style.left = `${act.index * (CELL_WIDTH + GAP) + CELL_WIDTH / 2}px`;
       await wait(TICK);
     } else if (act.type === 'range') {
       if (act.hi < act.lo) {
